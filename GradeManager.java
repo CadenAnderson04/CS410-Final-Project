@@ -1,12 +1,43 @@
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 public class GradeManager {
   private int currentClassID;
+  private Connection connection;
 
-  public GradeManager() {
-    currentClassID = -1;
+  public GradeManager() throws SQLException, IOException {
+    this.currentClassID = -1;
+    this.connection = DatabaseConnection.makeConnection();
   }
 
   public void newClass(String courseNumber, String term, int sectionNumber, String description) {
-    throw new UnsupportedOperationException("Not Implemented Yet");
+    String query = "INSERT INTO class (course_number, term, section_number, description) VALUES (?, ?, ?, ?)";
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+      // Query execution
+      stmt.setString(1, courseNumber);
+      stmt.setString(2, term);
+      stmt.setInt(3, sectionNumber);
+      stmt.setString(4, description);
+
+      // Action w/query results
+      int rowsAffected = stmt.executeUpdate();
+      if (rowsAffected > 0) {
+        System.out.println("The following class has been successfully created:");
+        System.out.println(courseNumber + " " + term + " " + sectionNumber + " " + description);
+      } else {
+        System.out.println("Failed to add class.");
+      }
+    } catch (SQLException e) {
+			System.err.println("SQLException: " + e.getMessage());
+			System.err.println("SQLState: " + e.getSQLState());
+			System.err.println("VendorError: " + e.getErrorCode());
+		}
+
+
+
   }
 
   /*
