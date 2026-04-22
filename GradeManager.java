@@ -47,9 +47,9 @@ public class GradeManager {
       stmt.setString(2, term);
       stmt.setInt(3, sectionNumber);
       stmt.setString(4, description);
+      int rowsAffected = stmt.executeUpdate();
 
       // Action w/query results
-      int rowsAffected = stmt.executeUpdate();
       if (rowsAffected > 0) {
         System.out.println("The following class has been successfully created:");
         System.out.println(courseNumber + " " + term + " " + sectionNumber + " " + description);
@@ -293,7 +293,27 @@ public class GradeManager {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
-    }  }
+    }  
+    String query = "INSERT INTO Category" +
+                   " (Name, Weight, ClassID)" + 
+                   " VALUES (?, ?, ?)";
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+      // Query Execution
+      stmt.setString(1, name);
+      stmt.setDouble(2, weight);
+      stmt.setInt(3, this.currentClassID);
+      int rowsAffected = stmt.executeUpdate();
+      // Action w/query results
+      if (rowsAffected > 0) {
+        System.out.println("The following category has been successfully created:");
+        System.out.println(name + " " + weight);
+      } else {
+        System.out.println("Failed to add category.");
+      }
+    } catch (SQLException e) {
+			System.err.println("Error creating category: " + e.getMessage());
+    }
+  }
 
   /**
    * Lists the assignments for the currently active class, if any.
@@ -303,20 +323,72 @@ public class GradeManager {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
-    }  }
+    }
+    String query = "SELECT A.Name as AssignmentName, A.Points, C.Name as CategoryName" +
+                   " FROM Assignment A JOIN Category C" +
+                   " ON A.CategoryID = C.ID" +
+                   " WHERE C.ClassID = ?" +
+                   " ORDER BY CategoryName, AssignmentName";
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+      // Query execution
+      stmt.setInt(1, this.currentClassID);
+      ResultSet rs = stmt.executeQuery();
+      // Action w/query results
+      boolean hasResults = false;
+      System.out.println("Assignments for the active class:");
+      // Only enters if there are assignments for the active class.
+      while (rs.next()) {
+        hasResults = true;
+        System.out.println("Category: " + rs.getString("CategoryName") + " Assignment: " + rs.getString("AssignmentName") + " Points: " + rs.getInt("Points"));
+      }
+      if (!hasResults) {
+        System.out.println("No assignments found.");
+      }
+    } catch (SQLException e) {
+      System.err.println("Error showing assignments: " + e.getMessage());
+    }
+  }  
 
   /**
    * Creates a new assignment with the given parameters for the currently active class.
    * @param name The name of the assignment (e.g., "Homework 1").
-   * @param categoryName The name of the category this assignment belongs to (e.g., "Homework").
    * @param description The assignment description (e.g., "Chapter 1 and 2 problems").
    * @param points The number of points the assignment is worth (e.g., 100).
+   * @param categoryName The name of the category this assignment belongs to (e.g., "Homework").
    */
-  public void addAssignment(String name, String categoryName, String description, int points) {
+  public void addAssignment(String name, String description, int points, String categoryName) {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
-    }  }
+    }  
+    String categorySubquery = "SELECT ID" +
+                              " FROM Category" +
+                              " WHERE Name = ?" +
+                              " AND ClassID = ?";
+    String query = "INSERT INTO Assignment" +
+                   " (Name, Description, Points, CategoryID)" + 
+                   " VALUES (?, ?, ?, (" + categorySubquery + "))";
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+      // Query Execution
+      stmt.setString(1, name);
+      stmt.setString(2, description);
+      stmt.setInt(3, points);
+      stmt.setString(4, categoryName);
+      stmt.setInt(5, this.currentClassID);
+      int rowsAffected = stmt.executeUpdate();
+      // Action w/query results
+      if (rowsAffected > 0) {
+        System.out.println("The following assignment has been successfully created within " + categoryName + ":");
+        System.out.println(name + " " + description + " " + " " + points);
+      } else {
+        System.out.println("Failed to add assignment.");
+      }
+    } catch (SQLException e) {
+      System.err.println("Error creating assignment: " + e.getMessage());
+      System.out.println("Failed to add assignment. Please ensure the category exists and is spelled correctly.");
+    }
+  }
+
 
   public void addStudent(String username) {
     if (this.currentClassID == -1) {
