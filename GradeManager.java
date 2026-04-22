@@ -17,6 +17,20 @@ public class GradeManager {
   }
 
   /**
+   * Closes the database connection.
+   */
+  public void closeConnection() {
+    try {
+      if (this.connection != null && !this.connection.isClosed()) {
+        this.connection.close();
+        System.out.println("Database connection closed successfully.");
+      }
+    } catch (SQLException e) {
+      System.err.println("Error closing database connection: " + e.getMessage());
+    }
+  }
+
+  /**
    * Creates a new class with the given parameters.
     * @param courseNumber The course number (e.g., "CS410").
     * @param term The term (e.g., "Sp20").
@@ -97,7 +111,6 @@ public class GradeManager {
                           " WHEN 'Sp' THEN 1" + 
                           " END DESC" +
                           " LIMIT 1";
-
     String query = "SELECT ID, CourseNumber, Term, SectionNumber" +
                    " FROM Class" +
                    " WHERE CourseNumber = ?" +
