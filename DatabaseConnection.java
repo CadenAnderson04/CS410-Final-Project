@@ -11,7 +11,7 @@ import java.sql.SQLException;
  */
 
 public class DatabaseConnection {
-    /*
+    /**
      * Establishes a connection to the database.
      * @return A Connection object representing the connection to the database.
      */

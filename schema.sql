@@ -4,7 +4,7 @@ USE grades;
 CREATE TABLE Class (
     ID int primary key auto_increment,
     CourseNumber varchar(50) NOT NULL,
-    Term varchar(50),
+    Term varchar(4),
     SectionNumber int,
     Description text
 );
