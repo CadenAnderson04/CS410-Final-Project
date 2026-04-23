@@ -324,7 +324,7 @@ public class GradeManager {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
     }
-    String query = "SELECT A.Name as AssignmentName, A.Points, C.Name as CategoryName" +
+    String query = "SELECT A.Name as AssignmentName, A.PointValue, C.Name as CategoryName" +
                    " FROM Assignment A JOIN Category C" +
                    " ON A.CategoryID = C.ID" +
                    " WHERE C.ClassID = ?" +
@@ -339,7 +339,7 @@ public class GradeManager {
       // Only enters if there are assignments for the active class.
       while (rs.next()) {
         hasResults = true;
-        System.out.println("Category: " + rs.getString("CategoryName") + " Assignment: " + rs.getString("AssignmentName") + " Points: " + rs.getInt("Points"));
+        System.out.println("Category: " + rs.getString("CategoryName") + " Assignment: " + rs.getString("AssignmentName") + " Points: " + rs.getInt("PointValue"));
       }
       if (!hasResults) {
         System.out.println("No assignments found.");
@@ -356,7 +356,7 @@ public class GradeManager {
    * @param points The number of points the assignment is worth (e.g., 100).
    * @param categoryName The name of the category this assignment belongs to (e.g., "Homework").
    */
-  public void addAssignment(String name, String description, int points, String categoryName) {
+  public void addAssignment(String name, String description, int pointValue, String categoryName) {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
@@ -366,20 +366,20 @@ public class GradeManager {
                               " WHERE Name = ?" +
                               " AND ClassID = ?";
     String query = "INSERT INTO Assignment" +
-                   " (Name, Description, Points, CategoryID)" + 
+                   " (Name, Description, PointValue, CategoryID)" + 
                    " VALUES (?, ?, ?, (" + categorySubquery + "))";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query Execution
       stmt.setString(1, name);
       stmt.setString(2, description);
-      stmt.setInt(3, points);
+      stmt.setInt(3, pointValue);
       stmt.setString(4, categoryName);
       stmt.setInt(5, this.currentClassID);
       int rowsAffected = stmt.executeUpdate();
       // Action w/query results
       if (rowsAffected > 0) {
         System.out.println("The following assignment has been successfully created within " + categoryName + ":");
-        System.out.println(name + " " + description + " " + " " + points);
+        System.out.println(name + " " + description + " " + pointValue);
       } else {
         System.out.println("Failed to add assignment.");
       }
@@ -389,13 +389,94 @@ public class GradeManager {
     }
   }
 
-
-  public void addStudent(String username) {
+  /**
+   * Adds a student and enrolls them in the active class.
+   * If the student already exists, they are enrolled in the active class.
+   * If the name provided differs from the stored name, the stored name is updated and a warning message is printed.
+   * 
+   * @param username The student's username (e.g., "jsmith").
+   * @param StudentID The student's ID number (e.g., 12345).
+   * @param lastName The student's last name (e.g., "Smith").
+   * @param firstName  The student's first name (e.g., "John").
+   */
+  public void addStudent(String username, int studentID, String lastName, String firstName) {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
-    }  }
+    }  
+    // Check if student already exists and whether any of the provided name info conflicts with the stored info for that student.
+    String studentExistenceCheck = "SELECT StudentID, LastName, FirstName, Username" +
+                                   " FROM Student" +
+                                   " WHERE StudentID = ?";
+    boolean existStudentNameMismatch = false;
+    try (PreparedStatement stmt = connection.prepareStatement(studentExistenceCheck)) {
+      stmt.setInt(1, studentID);
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (rs.next()) {
+          if (!rs.getString("LastName").equals(lastName) || !rs.getString("FirstName").equals(firstName) || !rs.getString("Username").equals(username)) {
+            existStudentNameMismatch = true;
+          }
+        }
+      }
+    } catch (SQLException e) {
+      System.err.println("Error checking student existence: " + e.getMessage());
+    }
+    // Handle results of student existence and name conflict checks
+    // Following query handles both adding a new student and updating name info if necessary.
+    String studentQuery = "INSERT INTO Student" +
+                  " (Username, StudentID, LastName, FirstName)" +
+                  " VALUES (?, ?, ?, ?)" +
+                  " ON DUPLICATE KEY UPDATE" +
+                  " Username = VALUES(Username)," +
+                  " LastName = VALUES(LastName)," +
+                  " FirstName = VALUES(FirstName)";
+    try (PreparedStatement stmt = connection.prepareStatement(studentQuery)) {
+      stmt.setString(1, username);
+      stmt.setInt(2, studentID);
+      stmt.setString(3, lastName);
+      stmt.setString(4, firstName);
+      stmt.executeUpdate();
+      if (existStudentNameMismatch) {
+        System.out.println("Warning: The provided name information conflicts with the stored information for student ID: " + studentID + ". The stored information has been updated to match the provided information.");
+      }
+    } catch (SQLException e) {
+      System.err.println("Error adding student: " + e.getMessage());
+    }
+    // Enroll student in active class, IGNORE if they are already enrolled.
+    String enrollQuery = "INSERT IGNORE INTO Enrolled" +
+                         " (StudentID, ClassID)" +
+                         " VALUES (?, ?)";
+    try (PreparedStatement stmt = connection.prepareStatement(enrollQuery)) {
+      stmt.setInt(1, studentID);
+      stmt.setInt(2, this.currentClassID);
+      int rowsAffected = stmt.executeUpdate();
+      if (rowsAffected > 0) {
+        System.out.println("Student with ID: " + studentID + " has been enrolled in the active class.");
+      } else {
+        System.out.println("Student with ID: " + studentID + " is already enrolled in the active class.");
+      }
+    } catch (SQLException e) {
+      System.err.println("Error enrolling student: " + e.getMessage());
+    }
+  }
 
+  /**
+   * Enrolls an existing student in the active class based on their username.
+   * If the student does not exist, an error message is printed.
+   * If the student is already enrolled in the active class, a warning message is printed.
+   * @param username The username of the student to enroll.
+   */
+  public void addStudent (String username) {
+    if (this.currentClassID == -1) {
+        System.out.println("No class currently selected. Please use select-class first.");
+        return;
+    }  
+
+  }
+
+  /**
+   * Lists the students enrolled in the active class, if any, with their username, student ID, and name.
+   */
   public void showStudents() {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
@@ -403,12 +484,26 @@ public class GradeManager {
     }
   }
 
+  /**
+   * Lists the students enrolled in the active class that have the searchTerm contained in their username, first name, or last name.
+   * @param searchTerm The term to search for in the students' username, first name, or last name. 
+   */
   public void showStudentsWithSearch(String searchTerm) {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
-    }  }
+    }  
+  }
 
+  /**
+   * Assigns a grade according to the given parameters.
+   * If the student already has a grade for the given assignment, the grade is updated to the new value.
+   * If the number of points exceeds the number of points the assignment is worth, print a warning message but still update the value.
+   * If the student or assignment does not exist, an error message is printed.
+   * @param assignmentName The name of the assignment (e.g., "Homework 1").
+   * @param username The username of the student receiving the grade (e.g., "jsmith").
+   * @param grade The grade being assigned (e.g., 85).
+   */
   public void grade(String assignmentName, String username, int grade) {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
@@ -416,11 +511,19 @@ public class GradeManager {
     }
   }
 
-  public String studentGrades(String username) {
+  public void studentGrades(String username) {
+    if (this.currentClassID == -1) {
+        System.out.println("No class currently selected. Please use select-class first.");
+        return;
+    }
     throw new UnsupportedOperationException("Not Implemented Yet");
   }
 
-  public String gradebook() {
+  public void gradebook() {
+    if (this.currentClassID == -1) {
+        System.out.println("No class currently selected. Please use select-class first.");
+        return;
+    }
     throw new UnsupportedOperationException("Not Implemented Yet");
   }
 

@@ -19,7 +19,7 @@ CREATE TABLE Category (
 
 CREATE TABLE Assignment (
     ID int primary key auto_increment,
-    Name varchar(50) NOT NULL UNIQUE,
+    Name varchar(50) NOT NULL,
     Description text,
     PointValue int,
     CategoryID int,
@@ -28,14 +28,15 @@ CREATE TABLE Assignment (
 
 CREATE TABLE Student (
     StudentID int primary key UNIQUE NOT NULL,
-    Username varchar(50) NOT NULL,
-    Name varchar(200) NOT NULL
+    Username varchar(50) NOT NULL UNIQUE,
+    LastName varchar(200) NOT NULL,
+    FirstName varchar(200) NOT NULL
 );
 
 CREATE TABLE Enrolled (
     StudentID int,
     ClassID int,
-    primary key (StudentID, ClassID),  
+    primary key (StudentID, ClassID) UNIQUE,  
     foreign key (StudentID) references Student(StudentID) on delete cascade,
     foreign key (ClassID) references Class(ID) on delete cascade
 );
