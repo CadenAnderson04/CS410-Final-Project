@@ -4,9 +4,10 @@ import java.util.Scanner;
 
 public class GradeManagerDriver {
   public static void main(String[] args) {
+    Scanner shell = new Scanner(System.in);
+
     try {
       GradeManager gradeManager = new GradeManager();
-      Scanner shell = new Scanner(System.in);
 
       boolean shouldExit = false;
       while (!shouldExit) {
@@ -160,9 +161,13 @@ public class GradeManagerDriver {
             break;
         }
       }
+
+      gradeManager.closeConnection();
     } catch (SQLException | IOException e) {
       System.out.println(e.getMessage());
     }
+
+    shell.close();
 
     // We'll prolly want a few arguement checks but one that I thought of while
     // implementing selectClass() is to ensure that the term is properly inputted to
