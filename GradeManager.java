@@ -14,6 +14,12 @@ public class GradeManager {
   public GradeManager() throws SQLException, IOException {
     this.currentClassID = -1;
     this.connection = DatabaseConnection.makeConnection();
+    // Test connection    
+    if (this.connection != null && !this.connection.isClosed()) {
+      System.out.println("Database connection established successfully.");
+    } else {
+      System.out.println("Failed to establish database connection.");
+    }
   }
 
   /**
@@ -371,9 +377,9 @@ public class GradeManager {
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query Execution
       stmt.setString(1, name);
-      stmt.setString(2, description);
-      stmt.setInt(3, pointValue);
-      stmt.setString(4, categoryName);
+      stmt.setString(2, categoryName);
+      stmt.setString(3, description);
+      stmt.setInt(4, pointValue);
       stmt.setInt(5, this.currentClassID);
       int rowsAffected = stmt.executeUpdate();
       // Action w/query results
@@ -470,8 +476,57 @@ public class GradeManager {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
-    }  
+    }
+    // Check if student exists & get ID if they do exist
+    String studentCheckQuery = "SELECT StudentID FROM Student WHERE Username = ?";
+    int studentID = -1;
+    try (PreparedStatement stmt = connection.prepareStatement(studentCheckQuery)) {
+      stmt.setString(1, username);
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (rs.next()) {
+          studentID = rs.getInt("StudentID");
+        }
+      }
+    } catch (SQLException e) {
+      System.err.println("Error checking student existence: " + e.getMessage());
+    }
 
+    if (studentID == -1) {
+      System.out.println("Student with username: " + username + " does not exist.");
+      return;
+    }
+    // Check if student is already enrolled in active class
+    String enrollmentCheckQuery = "SELECT * FROM Enrolled WHERE StudentID = ? AND ClassID = ?";
+    try (PreparedStatement stmt = connection.prepareStatement(enrollmentCheckQuery)) {
+      stmt.setInt(1, studentID);
+      stmt.setInt(2, this.currentClassID);
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (rs.next()) {
+          System.out.println("Student with username: " + username + " is already enrolled in the active class.");
+          return;
+        }
+      } catch (SQLException e) {
+        System.err.println("Error checking student enrollment: " + e.getMessage());
+      }
+    } catch (SQLException e) {
+      System.err.println("Error preparing enrollment check: " + e.getMessage());
+    }
+    // Enroll student in active class
+    String enrollQuery = "INSERT INTO Enrolled" +
+                         " (StudentID, ClassID)" +
+                         " VALUES (?, ?)";
+    try (PreparedStatement stmt = connection.prepareStatement(enrollQuery)) {
+      stmt.setInt(1, studentID);
+      stmt.setInt(2, this.currentClassID);
+      int rowsAffected = stmt.executeUpdate();
+      if (rowsAffected > 0) {
+        System.out.println("Student with username: " + username + " has been enrolled in the active class.");
+      } else {
+        System.out.println("Failed to enroll student with username: " + username + " in the active class.");
+      }
+    } catch (SQLException e) {
+      System.err.println("Error enrolling student: " + e.getMessage());
+    }
   }
 
   /**
@@ -481,6 +536,28 @@ public class GradeManager {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
+    }
+    String query = "SELECT S.Username, S.StudentID, S.FirstName, S.LastName" +
+                   " FROM Student S JOIN Enrolled E" +
+                   " ON S.StudentID = E.StudentID" +
+                   " WHERE E.ClassID = ?";
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+      // Query execution
+      stmt.setInt(1, this.currentClassID);
+      ResultSet rs = stmt.executeQuery();
+      // Action w/query results
+      boolean hasResults = false;
+      System.out.println("Students enrolled in the active class:");
+      // Only enters if there are students enrolled in the active class.
+      while (rs.next()) {
+        hasResults = true;
+        System.out.println(rs.getString("Username") + " " + rs.getInt("StudentID") + " " + rs.getString("FirstName") + " " + rs.getString("LastName"));
+      }
+      if (!hasResults) {
+        System.out.println("No students found.");
+      }
+    } catch (SQLException e) {
+      System.err.println("Error showing students: " + e.getMessage());
     }
   }
 
@@ -493,6 +570,32 @@ public class GradeManager {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
     }  
+    String query = "SELECT S.Username, S.StudentID, S.FirstName, S.LastName" +
+                   " FROM Student S JOIN Enrolled E" +
+                   " ON S.StudentID = E.StudentID" +
+                   " WHERE E.ClassID = ?" +
+                   " AND (S.Username LIKE ? OR S.FirstName LIKE ? OR S.LastName LIKE ?)";
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+      // Query execution
+      stmt.setInt(1, this.currentClassID);
+      stmt.setString(2, "%" + searchTerm + "%");
+      stmt.setString(3, "%" + searchTerm + "%");
+      stmt.setString(4, "%" + searchTerm + "%");
+      ResultSet rs = stmt.executeQuery();
+      // Action with query results
+      boolean hasResults = false;
+      System.out.println("Students enrolled in the active class:");
+      // Only enters if there are students enrolled in the active class.
+      while (rs.next()) {
+        hasResults = true;
+        System.out.println(rs.getString("Username") + " " + rs.getInt("StudentID") + " " + rs.getString("FirstName") + " " + rs.getString("LastName"));
+      }
+      if (!hasResults) {
+        System.out.println("No students found.");
+      }
+    } catch (SQLException e) {
+      System.err.println("Error showing students: " + e.getMessage());
+    }
   }
 
   /**

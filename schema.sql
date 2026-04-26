@@ -14,7 +14,8 @@ CREATE TABLE Category (
     Name varchar(50) NOT NULL,
     Weight double,
     ClassID int,
-    foreign key (ClassID) references Class(ID) on delete cascade
+    foreign key (ClassID) references Class(ID) on delete cascade,
+    UNIQUE (Name, ClassID)
 );
 
 CREATE TABLE Assignment (
@@ -23,7 +24,8 @@ CREATE TABLE Assignment (
     Description text,
     PointValue int,
     CategoryID int,
-    foreign key (CategoryID) references Category(ID) on delete cascade
+    foreign key (CategoryID) references Category(ID) on delete cascade,
+    UNIQUE (Name, CategoryID)
 );
 
 CREATE TABLE Student (
