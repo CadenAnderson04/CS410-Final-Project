@@ -356,7 +356,7 @@ public class GradeManager {
    * @param points The number of points the assignment is worth (e.g., 100).
    * @param categoryName The name of the category this assignment belongs to (e.g., "Homework").
    */
-  public void addAssignment(String name, String description, int pointValue, String categoryName) {
+  public void addAssignment(String name, String categoryName, String description, int pointValue) {
     if (this.currentClassID == -1) {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
