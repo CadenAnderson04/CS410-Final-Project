@@ -6,7 +6,9 @@ CREATE TABLE Class (
     CourseNumber varchar(50) NOT NULL,
     Term varchar(4),
     SectionNumber int,
-    Description text
+    Description text,
+    -- Ensures no duplicate classes are created.
+    UNIQUE (CourseNumber, Term, SectionNumber)
 );
 
 CREATE TABLE Category (
