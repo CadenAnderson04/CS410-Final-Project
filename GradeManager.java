@@ -667,6 +667,14 @@ public class GradeManager {
       System.out.println("No class currently selected. Please use select-class first.");
       return;
     }
+
+    String query = """
+        INSERT INTO Graded (StudentID, AssignmentID, Score)
+          SELECT Student.StudentID, Assignment.ID, ?
+          FROM Student, Assignment
+          WHERE Username = ? AND Assignment.Name = ?
+        ON DUPLICATE KEY UPDATE Score = ?;
+        """;
   }
 
   public void studentGrades(String username) {
