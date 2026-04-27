@@ -302,10 +302,11 @@ public class GradeManager {
       // Action w/query results
       boolean hasResults = false;
       System.out.println("Categories for the active class:");
+      System.out.println("Name | Weight");
       // Only enters if there are categories for the active class.
       while (rs.next()) {
         hasResults = true;
-        System.out.println(rs.getString("Name") + " " + rs.getDouble("Weight"));
+        System.out.println(rs.getString("Name") + " | " + rs.getDouble("Weight"));
       }
       if (!hasResults) {
         System.out.println("No categories found.");
