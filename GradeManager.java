@@ -411,9 +411,9 @@ public class GradeManager {
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query Execution
       stmt.setString(1, name);
-      stmt.setString(2, categoryName);
-      stmt.setString(3, description);
-      stmt.setInt(4, pointValue);
+      stmt.setString(2, description);
+      stmt.setInt(3, pointValue);
+      stmt.setString(4, categoryName);
       stmt.setInt(5, this.currentClassID);
       int rowsAffected = stmt.executeUpdate();
       // Action w/query results
