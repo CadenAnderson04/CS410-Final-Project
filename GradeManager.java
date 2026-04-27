@@ -620,7 +620,7 @@ public class GradeManager {
         return;
     }
 
-    String unfinishedQuery = """
+    String query = """
       SELECT Category.Name AS CategoryName, Assignment.Name AS AssignmentName, SUM(Score) AS Score, SUM(PointValue) AS PointValue,  
 	      ROUND(SUM(Score * Weight) / SUM(PointValue * Weight * (NOT ISNULL(Score))) * 100, 2) AS AttemptedPercent, 
         ROUND(SUM(Score * Weight) / SUM(PointValue * Weight) * 100, 2) AS TotalPercent
@@ -639,6 +639,19 @@ public class GradeManager {
         System.out.println("No class currently selected. Please use select-class first.");
         return;
     }
+
+    String query = """
+      SELECT username, Student.StudentID, CONCAT(firstName, ' ', lastName) AS FullName,
+        ROUND(SUM(Score * Weight) / SUM(PointValue * Weight * (NOT ISNULL(Score))) * 100, 2) AS AttemptedPercent,
+        ROUND(SUM(Score * Weight) / SUM(PointValue * Weight) * 100, 2) AS TotalPercent
+      FROM Category JOIN Assignment ON Assignment.CategoryID = Category.ID
+        LEFT JOIN Graded ON Graded.AssignmentID = Assignment.ID
+        JOIN Student ON Graded.StudentID = Student.StudentID OR Score IS NULL
+        JOIN Enrolled ON Enrolled.StudentID = Student.StudentID AND Enrolled.ClassID = Category.ClassID
+      WHERE Category.ClassID = 1
+      GROUP BY username, Student.StudentID, FullName
+    """;
+    
     throw new UnsupportedOperationException("Not Implemented Yet");
   }
 
