@@ -14,7 +14,7 @@ public class GradeManager {
   public GradeManager() throws SQLException, IOException {
     this.currentClassID = -1;
     this.connection = DatabaseConnection.makeConnection();
-    // Test connection    
+    // Test connection
     if (this.connection != null && !this.connection.isClosed()) {
       System.out.println("Database connection established successfully.");
     } else {
@@ -38,15 +38,16 @@ public class GradeManager {
 
   /**
    * Creates a new class with the given parameters.
-    * @param courseNumber The course number (e.g., "CS410").
-    * @param term The term (e.g., "Sp20").
-    * @param sectionNumber The section number. (e.g., 1).
-    * @param description The class description/Title. (e.g., "Databases")
+   * 
+   * @param courseNumber  The course number (e.g., "CS410").
+   * @param term          The term (e.g., "Sp20").
+   * @param sectionNumber The section number. (e.g., 1).
+   * @param description   The class description/Title. (e.g., "Databases")
    */
   public void newClass(String courseNumber, String term, int sectionNumber, String description) {
     String query = "INSERT INTO Class" +
-                   " (CourseNumber, Term, SectionNumber, Description)" + 
-                   " VALUES (?, ?, ?, ?)";
+        " (CourseNumber, Term, SectionNumber, Description)" +
+        " VALUES (?, ?, ?, ?)";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
       stmt.setString(1, courseNumber);
@@ -63,20 +64,22 @@ public class GradeManager {
         System.out.println("Failed to add class.");
       }
     } catch (SQLException e) {
-			System.err.println("Error creating class: " + e.getMessage());
-		}
+      System.err.println("Error creating class: " + e.getMessage());
+    }
   }
 
   /**
    * Lists all classes in the database.
-   * Includes class ID, course number, term, section number, and number of students.
-   * This method includes classes with zero students enrolled due to the LEFT JOIN with the Enrolled table.
+   * Includes class ID, course number, term, section number, and number of
+   * students.
+   * This method includes classes with zero students enrolled due to the LEFT JOIN
+   * with the Enrolled table.
    */
   public void listClasses() {
     String query = "SELECT ID, CourseNumber, Term, SectionNumber, count(StudentID) AS numStudents" +
-                   " FROM Class LEFT JOIN Enrolled" +
-                   " ON Class.ID = Enrolled.ClassID" +
-                   " GROUP BY Class.ID";
+        " FROM Class LEFT JOIN Enrolled" +
+        " ON Class.ID = Enrolled.ClassID" +
+        " GROUP BY Class.ID";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
       ResultSet rs = stmt.executeQuery();
@@ -87,41 +90,46 @@ public class GradeManager {
       // Only enters if there are classes in the database.
       while (rs.next()) {
         hasResults = true;
-        System.out.println(rs.getInt("ID") + " " + rs.getString("CourseNumber") + " " + rs.getString("Term") + " " + rs.getInt("SectionNumber") + " " + rs.getInt("numStudents"));
+        System.out.println(rs.getInt("ID") + " " + rs.getString("CourseNumber") + " " + rs.getString("Term")
+            + " " + rs.getInt("SectionNumber") + " " + rs.getInt("numStudents"));
       }
       if (!hasResults) {
         System.out.println("No classes found.");
       }
     } catch (SQLException e) {
-			System.err.println("Error listing classes: " + e.getMessage());
-		}
+      System.err.println("Error listing classes: " + e.getMessage());
+    }
   }
 
   /**
    * Selects a class based on the course number.
-   * The class selected is the only section in the most recent term for the given course number.
-   * If there are multiple sections in the most recent term, no class is selected and an error message is printed. 
+   * The class selected is the only section in the most recent term for the given
+   * course number.
+   * If there are multiple sections in the most recent term, no class is selected
+   * and an error message is printed.
+   * 
    * @param courseNumber The course number (e.g., "CS410").
    */
   public void selectClass(String courseNumber) {
     // Schema/Project specifics require term format to be in Sp20 or Fa20.
-    String termSubquery = "SELECT Term" +  
-                          " FROM Class" + 
-                          " WHERE CourseNumber = ?" +
-                          // Isolates and orders by the year first.
-                          " ORDER BY SUBSTR(Term, 3, 2) DESC," +
-                          // Isolates semester and orders by Fall, then Summer (if applicable), then Spring for each year.
-                          " CASE SUBSTR(Term, 1, 2)" + 
-                          " WHEN 'Fa' THEN 3" + 
-                          " WHEN 'SU' THEN 2" +
-                          " WHEN 'Sp' THEN 1" + 
-                          " END DESC" +
-                          " LIMIT 1";
+    String termSubquery = "SELECT Term" +
+        " FROM Class" +
+        " WHERE CourseNumber = ?" +
+        // Isolates and orders by the year first.
+        " ORDER BY SUBSTR(Term, 3, 2) DESC," +
+        // Isolates semester and orders by Fall, then Summer (if applicable), then
+        // Spring for each year.
+        " CASE SUBSTR(Term, 1, 2)" +
+        " WHEN 'Fa' THEN 3" +
+        " WHEN 'SU' THEN 2" +
+        " WHEN 'Sp' THEN 1" +
+        " END DESC" +
+        " LIMIT 1";
     String query = "SELECT ID, CourseNumber, Term, SectionNumber" +
-                   " FROM Class" +
-                   " WHERE CourseNumber = ?" +
-                   " AND Term =" + 
-                   " (" + termSubquery + ")";
+        " FROM Class" +
+        " WHERE CourseNumber = ?" +
+        " AND Term =" +
+        " (" + termSubquery + ")";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
       stmt.setString(1, courseNumber);
@@ -133,38 +141,46 @@ public class GradeManager {
         System.out.println("No class found for course number:" + courseNumber);
         return;
       } else {
-        // Store info for first class which will be used if there is only one class for the given course number and term. 
+        // Store info for first class which will be used if there is only one class for
+        // the given course number and term.
         int tempClassID = rs.getInt("ID");
         String tempCourseNumber = rs.getString("CourseNumber");
         String tempTerm = rs.getString("Term");
         int tempSectionNumber = rs.getInt("SectionNumber");
-        // Check if there are more than one class for the given course number in the most recent term
+        // Check if there are more than one class for the given course number in the
+        // most recent term
         if (rs.next()) {
-          System.out.println("Multiple sections found for course number: " + courseNumber + " in the most recent term. No class selected.");
+          System.out.println("Multiple sections found for course number: " + courseNumber
+              + " in the most recent term. No class selected.");
           System.out.println("Please select a class with the term and section number.");
         } else {
-          // If this code is reached, there is exactly one class for the given course number in the most recent term, so we select that class
+          // If this code is reached, there is exactly one class for the given course
+          // number in the most recent term, so we select that class
           this.currentClassID = tempClassID;
-          System.out.println(tempCourseNumber + " " + tempTerm + " " + tempSectionNumber + " has been selected.");
+          System.out.println(
+              tempCourseNumber + " " + tempTerm + " " + tempSectionNumber + " has been selected.");
         }
       }
     } catch (SQLException e) {
-			System.err.println("Error selecting class: " + e.getMessage());
-		}
+      System.err.println("Error selecting class: " + e.getMessage());
+    }
   }
 
   /**
    * Selects a class based on the course number and term.
-   * The class selected is the only section in the given term for the given course number.
-   * If there are multiple sections in the given term, no class is selected and an error message is printed.
+   * The class selected is the only section in the given term for the given course
+   * number.
+   * If there are multiple sections in the given term, no class is selected and an
+   * error message is printed.
+   * 
    * @param courseNumber The course number (e.g., "CS410").
-   * @param term The term (e.g., "Sp20").
+   * @param term         The term (e.g., "Sp20").
    */
   public void selectClassWithTerm(String courseNumber, String term) {
     String query = "SELECT ID, CourseNumber, Term, SectionNumber" +
-                   " FROM Class" +
-                   " WHERE CourseNumber = ?" +
-                   " AND Term = ?";
+        " FROM Class" +
+        " WHERE CourseNumber = ?" +
+        " AND Term = ?";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
       stmt.setString(1, courseNumber);
@@ -176,39 +192,44 @@ public class GradeManager {
         System.out.println("No class found for course number:" + courseNumber + " and term: " + term);
         return;
       } else {
-        // Store info for first class which will be used if there is only one class for the given course number and term. 
+        // Store info for first class which will be used if there is only one class for
+        // the given course number and term.
         int tempClassID = rs.getInt("ID");
         String tempCourseNumber = rs.getString("CourseNumber");
         String tempTerm = rs.getString("Term");
         int tempSectionNumber = rs.getInt("SectionNumber");
         // Check if there are more than one class for the given course number and term
         if (rs.next()) {
-          System.out.println("Multiple sections found for course number: " + courseNumber + " and term: " + term + ". No class selected.");
+          System.out.println("Multiple sections found for course number: " + courseNumber + " and term: "
+              + term + ". No class selected.");
           System.out.println("Please select a class with the section number as well.");
         } else {
-          // If this code is reached, there is exactly one class for the given course number and term, so we select that class
+          // If this code is reached, there is exactly one class for the given course
+          // number and term, so we select that class
           this.currentClassID = tempClassID;
           System.out.println("The following class has been selected:");
-          System.out.println(tempCourseNumber + " " + tempTerm + " " + tempSectionNumber + " has been selected.");
+          System.out.println(
+              tempCourseNumber + " " + tempTerm + " " + tempSectionNumber + " has been selected.");
         }
       }
     } catch (SQLException e) {
-			System.err.println("Error selecting class: " + e.getMessage());
-		}
+      System.err.println("Error selecting class: " + e.getMessage());
+    }
   }
 
   /**
    * Selects a class based on the course number, term, and section number.
-   * @param courseNumber The course number (e.g., "CS410").
-   * @param term The term (e.g., "Sp20").
+   * 
+   * @param courseNumber  The course number (e.g., "CS410").
+   * @param term          The term (e.g., "Sp20").
    * @param sectionNumber The section number.
    */
   public void selectClassWithSection(String courseNumber, String term, int sectionNumber) {
     String query = "SELECT ID, CourseNumber, Term, SectionNumber" +
-                   " FROM Class" +
-                   " WHERE CourseNumber = ?" +
-                   " AND Term = ?" +
-                   "AND SectionNumber = ?";
+        " FROM Class" +
+        " WHERE CourseNumber = ?" +
+        " AND Term = ?" +
+        "AND SectionNumber = ?";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
       stmt.setString(1, courseNumber);
@@ -216,19 +237,23 @@ public class GradeManager {
       stmt.setInt(3, sectionNumber);
       ResultSet rs = stmt.executeQuery();
       // Action w/query results
-      // Check if there are any classes at all for the given course number, term, and section number
+      // Check if there are any classes at all for the given course number, term, and
+      // section number
       if (!rs.next()) {
-        System.out.println("No class found for course number:" + courseNumber + ", term: " + term + ", and section number: " + sectionNumber);
+        System.out.println("No class found for course number:" + courseNumber + ", term: " + term
+            + ", and section number: " + sectionNumber);
         return;
       } else {
-        // If this code is reached, there is in fact a class for the given course number, term, and section number, so we select that class
+        // If this code is reached, there is in fact a class for the given course
+        // number, term, and section number, so we select that class
         this.currentClassID = rs.getInt("ID");
         System.out.println("The following class has been selected:");
-        System.out.println(rs.getString("CourseNumber") + " " + rs.getString("Term") + " " + rs.getInt("SectionNumber"));
+        System.out.println(
+            rs.getString("CourseNumber") + " " + rs.getString("Term") + " " + rs.getInt("SectionNumber"));
       }
     } catch (SQLException e) {
-			System.err.println("Error selecting class: " + e.getMessage());
-		}
+      System.err.println("Error selecting class: " + e.getMessage());
+    }
   }
 
   /**
@@ -236,8 +261,8 @@ public class GradeManager {
    */
   public void showClass() {
     String query = "SELECT CourseNumber, Term, SectionNumber, Description" +
-                   " FROM Class" +
-                   " WHERE ID = ?";
+        " FROM Class" +
+        " WHERE ID = ?";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
       stmt.setInt(1, this.currentClassID);
@@ -254,24 +279,25 @@ public class GradeManager {
         System.out.println("No class currently selected.");
       }
     } catch (SQLException e) {
-			System.err.println("Error showing class: " + e.getMessage());
-		}
+      System.err.println("Error showing class: " + e.getMessage());
+    }
   }
 
   /**
-   * Lists the categories for the currently active class, if any, with their weights.
+   * Lists the categories for the currently active class, if any, with their
+   * weights.
    */
   public void showCategories() {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
     }
     String query = "SELECT Name, Weight" +
-                   " FROM Category" +
-                   " WHERE ClassID = ?";
+        " FROM Category" +
+        " WHERE ClassID = ?";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
-      stmt.setInt(1,this.currentClassID);
+      stmt.setInt(1, this.currentClassID);
       ResultSet rs = stmt.executeQuery();
       // Action w/query results
       boolean hasResults = false;
@@ -290,19 +316,22 @@ public class GradeManager {
   }
 
   /**
-  ********* Do we want to care about keeping a classes categories weights summing to 1? ********
-  * Creates a new category with the given name and weight for the currently active class.
-  * @param name The name of the category (e.g., "Homework").
-  * @param weight The weight of the category (e.g., 0.4).
-  */
+   ********* Do we want to care about keeping a classes categories weights summing to 1?
+   * ********
+   * Creates a new category with the given name and weight for the currently
+   * active class.
+   * 
+   * @param name   The name of the category (e.g., "Homework").
+   * @param weight The weight of the category (e.g., 0.4).
+   */
   public void addCategory(String name, double weight) {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
-    }  
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
+    }
     String query = "INSERT INTO Category" +
-                   " (Name, Weight, ClassID)" + 
-                   " VALUES (?, ?, ?)";
+        " (Name, Weight, ClassID)" +
+        " VALUES (?, ?, ?)";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query Execution
       stmt.setString(1, name);
@@ -317,7 +346,7 @@ public class GradeManager {
         System.out.println("Failed to add category.");
       }
     } catch (SQLException e) {
-			System.err.println("Error creating category: " + e.getMessage());
+      System.err.println("Error creating category: " + e.getMessage());
     }
   }
 
@@ -327,14 +356,14 @@ public class GradeManager {
    */
   public void showAssignment() {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
     }
     String query = "SELECT A.Name as AssignmentName, A.PointValue, C.Name as CategoryName" +
-                   " FROM Assignment A JOIN Category C" +
-                   " ON A.CategoryID = C.ID" +
-                   " WHERE C.ClassID = ?" +
-                   " ORDER BY CategoryName, AssignmentName";
+        " FROM Assignment A JOIN Category C" +
+        " ON A.CategoryID = C.ID" +
+        " WHERE C.ClassID = ?" +
+        " ORDER BY CategoryName, AssignmentName";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
       stmt.setInt(1, this.currentClassID);
@@ -345,7 +374,8 @@ public class GradeManager {
       // Only enters if there are assignments for the active class.
       while (rs.next()) {
         hasResults = true;
-        System.out.println("Category: " + rs.getString("CategoryName") + " Assignment: " + rs.getString("AssignmentName") + " Points: " + rs.getInt("PointValue"));
+        System.out.println("Category: " + rs.getString("CategoryName") + " Assignment: "
+            + rs.getString("AssignmentName") + " Points: " + rs.getInt("PointValue"));
       }
       if (!hasResults) {
         System.out.println("No assignments found.");
@@ -353,27 +383,31 @@ public class GradeManager {
     } catch (SQLException e) {
       System.err.println("Error showing assignments: " + e.getMessage());
     }
-  }  
+  }
 
   /**
-   * Creates a new assignment with the given parameters for the currently active class.
-   * @param name The name of the assignment (e.g., "Homework 1").
-   * @param description The assignment description (e.g., "Chapter 1 and 2 problems").
-   * @param points The number of points the assignment is worth (e.g., 100).
-   * @param categoryName The name of the category this assignment belongs to (e.g., "Homework").
+   * Creates a new assignment with the given parameters for the currently active
+   * class.
+   * 
+   * @param name         The name of the assignment (e.g., "Homework 1").
+   * @param description  The assignment description (e.g., "Chapter 1 and 2
+   *                     problems").
+   * @param points       The number of points the assignment is worth (e.g., 100).
+   * @param categoryName The name of the category this assignment belongs to
+   *                     (e.g., "Homework").
    */
   public void addAssignment(String name, String categoryName, String description, int pointValue) {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
-    }  
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
+    }
     String categorySubquery = "SELECT ID" +
-                              " FROM Category" +
-                              " WHERE Name = ?" +
-                              " AND ClassID = ?";
+        " FROM Category" +
+        " WHERE Name = ?" +
+        " AND ClassID = ?";
     String query = "INSERT INTO Assignment" +
-                   " (Name, Description, PointValue, CategoryID)" + 
-                   " VALUES (?, ?, ?, (" + categorySubquery + "))";
+        " (Name, Description, PointValue, CategoryID)" +
+        " VALUES (?, ?, ?, (" + categorySubquery + "))";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query Execution
       stmt.setString(1, name);
@@ -384,7 +418,8 @@ public class GradeManager {
       int rowsAffected = stmt.executeUpdate();
       // Action w/query results
       if (rowsAffected > 0) {
-        System.out.println("The following assignment has been successfully created within " + categoryName + ":");
+        System.out
+            .println("The following assignment has been successfully created within " + categoryName + ":");
         System.out.println(name + " " + description + " " + pointValue);
       } else {
         System.out.println("Failed to add assignment.");
@@ -398,28 +433,31 @@ public class GradeManager {
   /**
    * Adds a student and enrolls them in the active class.
    * If the student already exists, they are enrolled in the active class.
-   * If the name provided differs from the stored name, the stored name is updated and a warning message is printed.
+   * If the name provided differs from the stored name, the stored name is updated
+   * and a warning message is printed.
    * 
-   * @param username The student's username (e.g., "jsmith").
+   * @param username  The student's username (e.g., "jsmith").
    * @param StudentID The student's ID number (e.g., 12345).
-   * @param lastName The student's last name (e.g., "Smith").
-   * @param firstName  The student's first name (e.g., "John").
+   * @param lastName  The student's last name (e.g., "Smith").
+   * @param firstName The student's first name (e.g., "John").
    */
   public void addStudent(String username, int studentID, String lastName, String firstName) {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
-    }  
-    // Check if student already exists and whether any of the provided name info conflicts with the stored info for that student.
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
+    }
+    // Check if student already exists and whether any of the provided name info
+    // conflicts with the stored info for that student.
     String studentExistenceCheck = "SELECT StudentID, LastName, FirstName, Username" +
-                                   " FROM Student" +
-                                   " WHERE StudentID = ?";
+        " FROM Student" +
+        " WHERE StudentID = ?";
     boolean existStudentNameMismatch = false;
     try (PreparedStatement stmt = connection.prepareStatement(studentExistenceCheck)) {
       stmt.setInt(1, studentID);
       try (ResultSet rs = stmt.executeQuery()) {
         if (rs.next()) {
-          if (!rs.getString("LastName").equals(lastName) || !rs.getString("FirstName").equals(firstName) || !rs.getString("Username").equals(username)) {
+          if (!rs.getString("LastName").equals(lastName) || !rs.getString("FirstName").equals(firstName)
+              || !rs.getString("Username").equals(username)) {
             existStudentNameMismatch = true;
           }
         }
@@ -428,14 +466,15 @@ public class GradeManager {
       System.err.println("Error checking student existence: " + e.getMessage());
     }
     // Handle results of student existence and name conflict checks
-    // Following query handles both adding a new student and updating name info if necessary.
+    // Following query handles both adding a new student and updating name info if
+    // necessary.
     String studentQuery = "INSERT INTO Student" +
-                  " (Username, StudentID, LastName, FirstName)" +
-                  " VALUES (?, ?, ?, ?)" +
-                  " ON DUPLICATE KEY UPDATE" +
-                  " Username = VALUES(Username)," +
-                  " LastName = VALUES(LastName)," +
-                  " FirstName = VALUES(FirstName)";
+        " (Username, StudentID, LastName, FirstName)" +
+        " VALUES (?, ?, ?, ?)" +
+        " ON DUPLICATE KEY UPDATE" +
+        " Username = VALUES(Username)," +
+        " LastName = VALUES(LastName)," +
+        " FirstName = VALUES(FirstName)";
     try (PreparedStatement stmt = connection.prepareStatement(studentQuery)) {
       stmt.setString(1, username);
       stmt.setInt(2, studentID);
@@ -443,15 +482,18 @@ public class GradeManager {
       stmt.setString(4, firstName);
       stmt.executeUpdate();
       if (existStudentNameMismatch) {
-        System.out.println("Warning: The provided name information conflicts with the stored information for student ID: " + studentID + ". The stored information has been updated to match the provided information.");
+        System.out.println(
+            "Warning: The provided name information conflicts with the stored information for student ID: "
+                + studentID
+                + ". The stored information has been updated to match the provided information.");
       }
     } catch (SQLException e) {
       System.err.println("Error adding student: " + e.getMessage());
     }
     // Enroll student in active class, IGNORE if they are already enrolled.
     String enrollQuery = "INSERT IGNORE INTO Enrolled" +
-                         " (StudentID, ClassID)" +
-                         " VALUES (?, ?)";
+        " (StudentID, ClassID)" +
+        " VALUES (?, ?)";
     try (PreparedStatement stmt = connection.prepareStatement(enrollQuery)) {
       stmt.setInt(1, studentID);
       stmt.setInt(2, this.currentClassID);
@@ -469,13 +511,15 @@ public class GradeManager {
   /**
    * Enrolls an existing student in the active class based on their username.
    * If the student does not exist, an error message is printed.
-   * If the student is already enrolled in the active class, a warning message is printed.
+   * If the student is already enrolled in the active class, a warning message is
+   * printed.
+   * 
    * @param username The username of the student to enroll.
    */
-  public void addStudent (String username) {
+  public void addStudent(String username) {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
     }
     // Check if student exists & get ID if they do exist
     String studentCheckQuery = "SELECT StudentID FROM Student WHERE Username = ?";
@@ -502,7 +546,8 @@ public class GradeManager {
       stmt.setInt(2, this.currentClassID);
       try (ResultSet rs = stmt.executeQuery()) {
         if (rs.next()) {
-          System.out.println("Student with username: " + username + " is already enrolled in the active class.");
+          System.out.println(
+              "Student with username: " + username + " is already enrolled in the active class.");
           return;
         }
       } catch (SQLException e) {
@@ -513,8 +558,8 @@ public class GradeManager {
     }
     // Enroll student in active class
     String enrollQuery = "INSERT INTO Enrolled" +
-                         " (StudentID, ClassID)" +
-                         " VALUES (?, ?)";
+        " (StudentID, ClassID)" +
+        " VALUES (?, ?)";
     try (PreparedStatement stmt = connection.prepareStatement(enrollQuery)) {
       stmt.setInt(1, studentID);
       stmt.setInt(2, this.currentClassID);
@@ -530,17 +575,18 @@ public class GradeManager {
   }
 
   /**
-   * Lists the students enrolled in the active class, if any, with their username, student ID, and name.
+   * Lists the students enrolled in the active class, if any, with their username,
+   * student ID, and name.
    */
   public void showStudents() {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
     }
     String query = "SELECT S.Username, S.StudentID, S.FirstName, S.LastName" +
-                   " FROM Student S JOIN Enrolled E" +
-                   " ON S.StudentID = E.StudentID" +
-                   " WHERE E.ClassID = ?";
+        " FROM Student S JOIN Enrolled E" +
+        " ON S.StudentID = E.StudentID" +
+        " WHERE E.ClassID = ?";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
       stmt.setInt(1, this.currentClassID);
@@ -551,7 +597,8 @@ public class GradeManager {
       // Only enters if there are students enrolled in the active class.
       while (rs.next()) {
         hasResults = true;
-        System.out.println(rs.getString("Username") + " " + rs.getInt("StudentID") + " " + rs.getString("FirstName") + " " + rs.getString("LastName"));
+        System.out.println(rs.getString("Username") + " " + rs.getInt("StudentID") + " "
+            + rs.getString("FirstName") + " " + rs.getString("LastName"));
       }
       if (!hasResults) {
         System.out.println("No students found.");
@@ -562,19 +609,22 @@ public class GradeManager {
   }
 
   /**
-   * Lists the students enrolled in the active class that have the searchTerm contained in their username, first name, or last name.
-   * @param searchTerm The term to search for in the students' username, first name, or last name. 
+   * Lists the students enrolled in the active class that have the searchTerm
+   * contained in their username, first name, or last name.
+   * 
+   * @param searchTerm The term to search for in the students' username, first
+   *                   name, or last name.
    */
   public void showStudentsWithSearch(String searchTerm) {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
-    }  
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
+    }
     String query = "SELECT S.Username, S.StudentID, S.FirstName, S.LastName" +
-                   " FROM Student S JOIN Enrolled E" +
-                   " ON S.StudentID = E.StudentID" +
-                   " WHERE E.ClassID = ?" +
-                   " AND (S.Username LIKE ? OR S.FirstName LIKE ? OR S.LastName LIKE ?)";
+        " FROM Student S JOIN Enrolled E" +
+        " ON S.StudentID = E.StudentID" +
+        " WHERE E.ClassID = ?" +
+        " AND (S.Username LIKE ? OR S.FirstName LIKE ? OR S.LastName LIKE ?)";
     try (PreparedStatement stmt = connection.prepareStatement(query)) {
       // Query execution
       stmt.setInt(1, this.currentClassID);
@@ -588,7 +638,8 @@ public class GradeManager {
       // Only enters if there are students enrolled in the active class.
       while (rs.next()) {
         hasResults = true;
-        System.out.println(rs.getString("Username") + " " + rs.getInt("StudentID") + " " + rs.getString("FirstName") + " " + rs.getString("LastName"));
+        System.out.println(rs.getString("Username") + " " + rs.getInt("StudentID") + " "
+            + rs.getString("FirstName") + " " + rs.getString("LastName"));
       }
       if (!hasResults) {
         System.out.println("No students found.");
@@ -600,60 +651,93 @@ public class GradeManager {
 
   /**
    * Assigns a grade according to the given parameters.
-   * If the student already has a grade for the given assignment, the grade is updated to the new value.
-   * If the number of points exceeds the number of points the assignment is worth, print a warning message but still update the value.
+   * If the student already has a grade for the given assignment, the grade is
+   * updated to the new value.
+   * If the number of points exceeds the number of points the assignment is worth,
+   * print a warning message but still update the value.
    * If the student or assignment does not exist, an error message is printed.
+   * 
    * @param assignmentName The name of the assignment (e.g., "Homework 1").
-   * @param username The username of the student receiving the grade (e.g., "jsmith").
-   * @param grade The grade being assigned (e.g., 85).
+   * @param username       The username of the student receiving the grade (e.g.,
+   *                       "jsmith").
+   * @param grade          The grade being assigned (e.g., 85).
    */
   public void grade(String assignmentName, String username, int grade) {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
     }
   }
 
   public void studentGrades(String username) {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
     }
 
     String query = """
-      SELECT Category.Name AS CategoryName, Assignment.Name AS AssignmentName, SUM(Score) AS Score, SUM(PointValue) AS PointValue,  
-	      ROUND(SUM(Score * Weight) / SUM(PointValue * Weight * (NOT ISNULL(Score))) * 100, 2) AS AttemptedPercent, 
-        ROUND(SUM(Score * Weight) / SUM(PointValue * Weight) * 100, 2) AS TotalPercent
-      FROM Category JOIN Assignment ON Assignment.CategoryID = Category.ID
-        LEFT JOIN Graded ON Graded.AssignmentID = Assignment.ID
-        LEFT JOIN Student ON Graded.StudentID = Student.StudentID
-      WHERE (username = "jdoe" OR username IS NULL) AND Category.ClassID = 1
-      GROUP BY Category.Name, Assignment.Name WITH ROLLUP;
-    """;
-    
-    throw new UnsupportedOperationException("Not Implemented Yet");
+          SELECT Category.Name AS CategoryName, Assignment.Name AS AssignmentName, SUM(Score) AS Score, SUM(PointValue) AS PointValue,
+            ROUND(SUM(Score * Weight) / SUM(PointValue * Weight * (NOT ISNULL(Score))) * 100, 2) AS AttemptedPercent,
+            ROUND(SUM(Score * Weight) / SUM(PointValue * Weight) * 100, 2) AS TotalPercent
+          FROM Category JOIN Assignment ON Assignment.CategoryID = Category.ID
+            LEFT JOIN Graded ON Graded.AssignmentID = Assignment.ID
+            LEFT JOIN Student ON Graded.StudentID = Student.StudentID
+          WHERE (username = ? OR username IS NULL) AND Category.ClassID = ?
+          GROUP BY Category.Name, Assignment.Name WITH ROLLUP;
+        """;
+
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+      stmt.setString(1, username);
+      stmt.setInt(2, this.currentClassID);
+      ResultSet rs = stmt.executeQuery();
+
+      boolean hasResults = false;
+      System.out.println("Student grades for the active class:");
+      while (rs.next()) {
+        hasResults = true;
+        if (rs.getString("AssignmentName") != null) {
+          System.out.println("\t" + rs.getString("AssignmentName") + "\t" +
+              rs.getInt("Score") + " \\ " + rs.getInt("PointValue") + "\t" +
+              rs.getDouble("TotalPercent"));
+        } else if (rs.getString("CategoryName") != null) {
+          System.out.println(rs.getString("CategoryName") + "\t" +
+              rs.getInt("Score") + " \\ " + rs.getInt("PointValue"));
+          System.out.println("Attempted Grade: " + rs.getDouble("AttemptedPercent"));
+          System.out.println("Total Grade: " + rs.getDouble("TotalPercent"));
+          System.out.println();
+        } else {
+          System.out.println("========= Summary =========");
+          System.out.println("Overall Attempted Grade: " + rs.getDouble("AttemptedPercent"));
+          System.out.println("Overall Grade: " + rs.getDouble("TotalPercent"));
+        }
+      }
+      if (!hasResults) {
+        System.out.println("No students found.");
+      }
+    } catch (SQLException e) {
+      System.err.println("Error showing students: " + e.getMessage());
+    }
   }
 
   public void gradebook() {
     if (this.currentClassID == -1) {
-        System.out.println("No class currently selected. Please use select-class first.");
-        return;
+      System.out.println("No class currently selected. Please use select-class first.");
+      return;
     }
 
     String query = """
-      SELECT username, Student.StudentID, CONCAT(firstName, ' ', lastName) AS FullName,
-        ROUND(SUM(Score * Weight) / SUM(PointValue * Weight * (NOT ISNULL(Score))) * 100, 2) AS AttemptedPercent,
-        ROUND(SUM(Score * Weight) / SUM(PointValue * Weight) * 100, 2) AS TotalPercent
-      FROM Category JOIN Assignment ON Assignment.CategoryID = Category.ID
-        LEFT JOIN Graded ON Graded.AssignmentID = Assignment.ID
-        JOIN Student ON Graded.StudentID = Student.StudentID OR Score IS NULL
-        JOIN Enrolled ON Enrolled.StudentID = Student.StudentID AND Enrolled.ClassID = Category.ClassID
-      WHERE Category.ClassID = 1
-      GROUP BY username, Student.StudentID, FullName
-    """;
-    
+          SELECT username, Student.StudentID, CONCAT(firstName, ' ', lastName) AS FullName,
+            ROUND(SUM(Score * Weight) / SUM(PointValue * Weight * (NOT ISNULL(Score))) * 100, 2) AS AttemptedPercent,
+            ROUND(SUM(Score * Weight) / SUM(PointValue * Weight) * 100, 2) AS TotalPercent
+          FROM Category JOIN Assignment ON Assignment.CategoryID = Category.ID
+            LEFT JOIN Graded ON Graded.AssignmentID = Assignment.ID
+            JOIN Student ON Graded.StudentID = Student.StudentID OR Score IS NULL
+            JOIN Enrolled ON Enrolled.StudentID = Student.StudentID AND Enrolled.ClassID = Category.ClassID
+          WHERE Category.ClassID = 1
+          GROUP BY username, Student.StudentID, FullName
+        """;
+
     throw new UnsupportedOperationException("Not Implemented Yet");
   }
-
 
 }
