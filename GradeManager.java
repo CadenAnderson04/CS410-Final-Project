@@ -668,13 +668,58 @@ public class GradeManager {
       return;
     }
 
+    // query ensures the Assignment belongs to a Category in the current Class
+    // and that the Student is actually Enrolled in the current Class.
     String query = """
         INSERT INTO Graded (StudentID, AssignmentID, Score)
-          SELECT Student.StudentID, Assignment.ID, ?
-          FROM Student, Assignment
-          WHERE Username = ? AND Assignment.Name = ?
-        ON DUPLICATE KEY UPDATE Score = ?;
+        SELECT s.StudentID, a.ID, ?
+        FROM Student s
+        JOIN Enrolled e ON s.StudentID = e.StudentID
+        JOIN Assignment a ON a.Name = ?
+        JOIN Category c ON a.CategoryID = c.ID
+        WHERE s.Username = ? 
+          AND e.ClassID = ? 
+          AND c.ClassID = ?
+        ON DUPLICATE KEY UPDATE Score = VALUES(Score);
         """;
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+      stmt.setInt(1, grade);
+      stmt.setString(2, assignmentName);
+      stmt.setString(3, username);
+      stmt.setInt(4, this.currentClassID);
+      stmt.setInt(5, this.currentClassID);
+      int rowsAffected = stmt.executeUpdate();
+      if (rowsAffected > 0) {
+        System.out.println("Grade of " + grade + " has been assigned to student with username: " + username
+          + " for assignment: " + assignmentName);
+      } else {
+        System.out.println("Failed to assign grade or grade being assigned is the same as the current grade." + 
+          "Please ensure the student and assignment exist, are spelled correctly and that the grade being assigned is different from the current grade.");
+      }
+      // Check if the assigned grade exceeds the point value of the assignment and print a warning if so.
+      String pointValueQuery = """
+          SELECT PointValue
+          FROM Assignment
+          WHERE Name = ? AND CategoryID IN (
+            SELECT ID FROM Category WHERE ClassID = ?
+          );
+          """;
+      try (PreparedStatement pointValueStmt = connection.prepareStatement(pointValueQuery)) {
+        pointValueStmt.setString(1, assignmentName);
+        pointValueStmt.setInt(2, this.currentClassID);
+        ResultSet pointValueRs = pointValueStmt.executeQuery();
+        if (pointValueRs.next()) {
+          int pointValue = pointValueRs.getInt("PointValue");
+          if (grade > pointValue) {
+            System.out.println("Warning: Assigned grade exceeds the point value of the assignment.");
+          }
+        }
+      } catch (SQLException e) {
+        System.err.println("Error checking point value: " + e.getMessage());
+      }
+    } catch (SQLException e) {
+      System.err.println("Error assigning grade: " + e.getMessage());
+    }
   }
 
   public void studentGrades(String username) {
