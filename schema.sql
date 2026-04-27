@@ -38,7 +38,7 @@ CREATE TABLE Student (
 CREATE TABLE Enrolled (
     StudentID int,
     ClassID int,
-    primary key (StudentID, ClassID) UNIQUE,  
+    primary key (StudentID, ClassID),  
     foreign key (StudentID) references Student(StudentID) on delete cascade,
     foreign key (ClassID) references Class(ID) on delete cascade
 );
