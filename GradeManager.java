@@ -694,11 +694,11 @@ public class GradeManager {
       System.out.println("Grade for given student in the active class:");
       while (rs.next()) {
         if (rs.getString("AssignmentName") != null) {
-          System.out.println("\t" + rs.getString("AssignmentName") + "\t" +
-              rs.getInt("Score") + " \\ " + rs.getInt("PointValue") + "\t" +
+          System.out.println("    " + rs.getString("AssignmentName") + "    " +
+              rs.getInt("Score") + " \\ " + rs.getInt("PointValue") + "    " +
               rs.getDouble("TotalPercent"));
         } else if (rs.getString("CategoryName") != null) {
-          System.out.println(rs.getString("CategoryName") + "\t" +
+          System.out.println(rs.getString("CategoryName") + "    " +
               rs.getInt("Score") + " \\ " + rs.getInt("PointValue"));
           System.out.println("Attempted Grade: " + rs.getDouble("AttemptedPercent"));
           System.out.println("Total Grade: " + rs.getDouble("TotalPercent"));
@@ -739,8 +739,8 @@ public class GradeManager {
       System.out.println("Gradebook for the active class:");
       while (rs.next()) {
         System.out.println(rs.getString("FullName") + " " + rs.getString("username") + " " + rs.getInt("StudentID"));
-        System.out.println("\t" + "Attempted Grade: " + rs.getDouble("AttemptedPercent"));
-        System.out.println("\t" + "Total Grade: " + rs.getDouble("TotalPercent"));
+        System.out.println("    " + "Attempted Grade: " + rs.getDouble("AttemptedPercent"));
+        System.out.println("    " + "Total Grade: " + rs.getDouble("TotalPercent"));
       }
     } catch (SQLException e) {
       System.err.println("Error showing gradebook: " + e.getMessage());
