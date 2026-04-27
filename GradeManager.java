@@ -691,10 +691,8 @@ public class GradeManager {
       stmt.setInt(2, this.currentClassID);
       ResultSet rs = stmt.executeQuery();
 
-      boolean hasResults = false;
-      System.out.println("Student grades for the active class:");
+      System.out.println("Grade for given student in the active class:");
       while (rs.next()) {
-        hasResults = true;
         if (rs.getString("AssignmentName") != null) {
           System.out.println("\t" + rs.getString("AssignmentName") + "\t" +
               rs.getInt("Score") + " \\ " + rs.getInt("PointValue") + "\t" +
@@ -711,11 +709,8 @@ public class GradeManager {
           System.out.println("Overall Grade: " + rs.getDouble("TotalPercent"));
         }
       }
-      if (!hasResults) {
-        System.out.println("No students found.");
-      }
     } catch (SQLException e) {
-      System.err.println("Error showing students: " + e.getMessage());
+      System.err.println("Error showing student grades: " + e.getMessage());
     }
   }
 
@@ -733,11 +728,22 @@ public class GradeManager {
             LEFT JOIN Graded ON Graded.AssignmentID = Assignment.ID
             JOIN Student ON Graded.StudentID = Student.StudentID OR Score IS NULL
             JOIN Enrolled ON Enrolled.StudentID = Student.StudentID AND Enrolled.ClassID = Category.ClassID
-          WHERE Category.ClassID = 1
+          WHERE Category.ClassID = ?
           GROUP BY username, Student.StudentID, FullName
         """;
 
-    throw new UnsupportedOperationException("Not Implemented Yet");
-  }
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+      stmt.setInt(1, this.currentClassID);
+      ResultSet rs = stmt.executeQuery();
 
+      System.out.println("Gradebook for the active class:");
+      while (rs.next()) {
+        System.out.println(rs.getString("FullName") + " " + rs.getString("username") + " " + rs.getInt("StudentID"));
+        System.out.println("\t" + "Attempted Grade: " + rs.getDouble("AttemptedPercent"));
+        System.out.println("\t" + "Total Grade: " + rs.getDouble("TotalPercent"));
+      }
+    } catch (SQLException e) {
+      System.err.println("Error showing gradebook: " + e.getMessage());
+    }
+  }
 }
