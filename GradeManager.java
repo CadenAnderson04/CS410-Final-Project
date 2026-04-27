@@ -700,8 +700,8 @@ public class GradeManager {
         } else if (rs.getString("CategoryName") != null) {
           System.out.println(rs.getString("CategoryName") + "    " +
               rs.getInt("Score") + " \\ " + rs.getInt("PointValue"));
-          System.out.println("Attempted Grade: " + rs.getDouble("AttemptedPercent"));
-          System.out.println("Total Grade: " + rs.getDouble("TotalPercent"));
+          System.out.println("  Attempted Grade: " + rs.getDouble("AttemptedPercent"));
+          System.out.println("  Total Grade: " + rs.getDouble("TotalPercent"));
           System.out.println();
         } else {
           System.out.println("========= Summary =========");
