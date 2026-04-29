@@ -168,13 +168,6 @@ public class GradeManagerDriver {
     }
 
     shell.close();
-
-    // We'll prolly want a few arguement checks but one that I thought of while
-    // implementing selectClass() is to ensure that the term is properly inputted to
-    // the specifications given in the project documentation.
-    // For example, if the user inputs "Fall2024" instead of "Fa24", the method
-    // won't
-    // output the most recent term properly.
   }
 
   public static void printWrongNumArgs(String commandName, int numArgs) {
